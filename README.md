@@ -16,3 +16,8 @@ This is a full-stack implementation of the popular word game, Wordle, built for 
 * [ ] **Loss Condition:** Detect when the user runs out of guesses (after 6 incorrect tries).
 * [ ] **Reveal Word:** Show the secret word if the user loses.
 * [ ] **Game Reset:** Allow the user to start a new game after a win or loss.
+
+
+## APIS Used:
+* Rapid Api: WordleAPI[https://rapidapi.com/azizbergach/api/wordle-game-api1]
+* Dictionary Api to check if words are valid : Dictonary API[https://dictionaryapi.dev/]

@@ -1,8 +1,8 @@
 'use server'
 import React from 'react'
-export default async function GetWordleWord() {
+export default async function CheckWordleWord(guess : string) {
     // Wordle .txt answers list from cfreshman github
-    const url = 'https://wordle-game-api1.p.rapidapi.com/word';
+    const url = 'https://wordle-game-api1.p.rapidapi.com/guess';
     const options = {
         method: 'POST',
         headers: {
@@ -11,16 +11,17 @@ export default async function GetWordleWord() {
             'Content-Type': 'application/json'
         },
         body : JSON.stringify({
+            word : guess,
             timezone: 'UTC + 0'
         })
-    }
+        }
 
-    const response = await fetch(url, options)
-    .then(response => response.json())
-    .then(data => {
-        console.log(data)
-        return data
-    })
+        const response = await fetch(url, options)
+        .then(response => response.json())
+        .then(data => {
+            console.log(data)
+            return data
+        })
 
-    return response
+        return response
 }

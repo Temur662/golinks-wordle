@@ -4,56 +4,43 @@ import WordleRow from "@/components/WordleRow";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { useGetWordleWord } from "./server/hooks/useGetWordleWord";
+import CheckWordleWord from "./server/CheckWordleGuess";
+import CheckIfValidWord from "./server/CheckIfValidWord";
+import { toast } from "sonner"
 
 //Constants 
 const WORD_LENGTH = 5;
 const MAX_TRIES = 6;
-const FLIP_ANIMATION_DURATION = 600;
-const DELAY_BETWEEN_FLIPS = 300; 
 
 // Calculates feedback for a guess compared to the secret word
-const calculateFeedback = (guess : string, secretWord : string) => {
+const calculateFeedback = (guess : string) => {
   const feedback = Array(WORD_LENGTH).fill('absent');
-  const secretLetters = secretWord.split('');
   const guessLetters = guess.split('');
-  const usedSecretIndices = new Set();
 
-  // First pass: Check for correct letters (Green)
+  // check response
   for (let i = 0; i < WORD_LENGTH; i++) {
-      if (guessLetters[i] === secretLetters[i]) {
+      if (guessLetters[i] == '+') {
           feedback[i] = 'correct';
-          usedSecretIndices.add(i);
+      }
+      else if( guessLetters[i] == 'x'){
+        feedback[i] = 'present';
       }
   }
 
-  // Second pass: Check for present letters (Yellow)
-  for (let i = 0; i < WORD_LENGTH; i++) {
-      if (feedback[i] !== 'correct') {
-          const letterIndex = secretLetters.findIndex(
-              (secretLetter, index) => !usedSecretIndices.has(index) && secretLetter === guessLetters[i]
-          );
-          if (letterIndex !== -1) {
-              feedback[i] = 'present';
-              usedSecretIndices.add(letterIndex);
-          }
-      }
-  }
   return feedback;
 };
 
 export default function Home() {
   // State 
-  const [secretWord, setSecretWord] = useState('');
   const [guesses, setGuesses] = useState<string[]>([]); // Array of guess strings
   const [feedbackList, setFeedbackList] = useState<string[]>([]); // Array of feedback arrays
   const [currentGuess, setCurrentGuess] = useState('');
   const [currentRowIndex, setCurrentRowIndex] = useState(0);
   const [keyStates, setKeyStates] = useState({}); // { q: 'absent', w: 'present', ... }
-  const [message, setMessage] = useState('');
   const [isGameOver, setIsGameOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // To disable input during animation/submit
   const [shakeRowIndex, setShakeRowIndex] = useState(null); // Index of row to shake
-  //const { data : word, isLoading } = useGetWordleWord()
+  const { data : word, isLoading } = useGetWordleWord()
   // Effect for handling physical keyboard input
   useEffect(() => {
   const handleKeyDown = (event) => {
@@ -73,7 +60,6 @@ export default function Home() {
   window.addEventListener('keydown', handleKeyDown);
   return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isProcessing, isGameOver, currentGuess, guesses]);
-
   const handleLetter = useCallback((letter) => {
     if (currentGuess.length < WORD_LENGTH) {
         setCurrentGuess(prev => prev + letter);
@@ -93,26 +79,31 @@ export default function Home() {
         return;
     }
 
-    if (!validWords.has(currentGuess)) {
-        setMessage("Not in word list!");
+    const IsValidWord = await CheckIfValidWord(currentGuess)
+    console.log(IsValidWord)
+    setIsProcessing(true); // Disable input
+    if ( !IsValidWord ) {
+        toast("Not A Valid Word!")
         setShakeRowIndex(currentRowIndex);
+        setIsProcessing(false);
         return;
     }
+    let feedback = Array(WORD_LENGTH).fill('absent');
 
-    setIsProcessing(true); // Disable input
-    setMessage(''); // Clear previous messages
+    const GuessResponse : { result: string, isOk: boolean, error: string } | undefined = await CheckWordleWord(currentGuess)
+    if( !GuessResponse?.error && GuessResponse?.result ){
+      setIsProcessing(true); // Disable input
+  
+      feedback = calculateFeedback(GuessResponse?.result);
 
-    const feedback = calculateFeedback(currentGuess, secretWord);
+      // Update guesses and feedback
+      const newGuesses = [...guesses, currentGuess];
+      const newFeedbackList = [...feedbackList, feedback];
+      setGuesses(newGuesses);
+      setFeedbackList(newFeedbackList);
 
-    // --- Apply Flip Animation (Staggered) ---
-    await new Promise(resolve => setTimeout(resolve, (FLIP_ANIMATION_DURATION + DELAY_BETWEEN_FLIPS) * WORD_LENGTH + 100));
-
-
-    // Update guesses and feedback
-    const newGuesses = [...guesses, currentGuess];
-    const newFeedbackList = [...feedbackList, feedback];
-    setGuesses(newGuesses);
-    setFeedbackList(newFeedbackList);
+      setIsProcessing(false)
+    }
 
     // Update keyboard states
     const newKeyStates = { ...keyStates };
@@ -126,14 +117,15 @@ export default function Home() {
             if (newStatus === 'absent') newKeyStates[letter] = 'absent';
         }
     });
+
     setKeyStates(newKeyStates);
 
     // Check win/loss condition
-    if (currentGuess === secretWord) {
-        setMessage("You Win!");
+    if (currentGuess === word) {
+        toast("You Win!")
         setIsGameOver(true);
-    } else if (newGuesses.length === MAX_TRIES) {
-        setMessage(`Game Over! Word was: ${secretWord.toUpperCase()}`);
+    } else if (guesses.length === MAX_TRIES) {
+        toast(`Game Over! Word was: ${word.toUpperCase()}`)
         setIsGameOver(true);
     } else {
         // Move to next row
@@ -143,14 +135,15 @@ export default function Home() {
     }
 
     // If game ended, keep processing true to prevent further input until reset
-    if (currentGuess === secretWord || newGuesses.length === MAX_TRIES) {
+    if (currentGuess === word || guesses.length === MAX_TRIES) {
         // Keep isProcessing true or handle differently if needed
+        setIsProcessing(true)
+        setIsGameOver(true)
     } else {
         setIsProcessing(false); // Re-enable input for next guess
     }
 
-
-  }, [currentGuess, secretWord, guesses, feedbackList, keyStates, isProcessing, isGameOver, currentRowIndex]);
+  }, [currentGuess, word, guesses, feedbackList, keyStates, isProcessing, isGameOver, currentRowIndex]);
 
   // Handler for virtual keyboard clicks
   const handleVirtualKeyPress = useCallback((key) => {

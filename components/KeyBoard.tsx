@@ -10,7 +10,7 @@ const Key = ({ value, status = 'default', isWide = false, onClick }) => {
         absent: 'bg-neutral-700 text-white', // Darker gray for absent keys
     };
 
-    const widthClass = isWide ? 'col-span-3' : 'col-span-1'; // Use grid span for width
+    const widthClass = isWide ? 'col-span-2' : 'col-span-1'; // Use grid span for width
 
     return (
         <button
@@ -31,22 +31,23 @@ export default function Keyboard ({ keyStates, onKeyPress }) {
     ];
 
     return (
-        <div className="flex flex-col items-center w-full max-w-xl mx-auto">
+        <div className="flex flex-col items-center w-full max-w-2xl mx-auto justify-center">
             {layout.map((row, rowIndex) => (
-                <div key={rowIndex} className="grid grid-cols-15 justify-center w-full gap-1 my-0.5">
+                <div key={rowIndex} className="grid grid-cols-10 justify-center w-full gap-1 my-0.5">
                     {/* Add padding for the middle row to align keys */}
-                    {(rowIndex === 0) && <div className="w-4 sm:w-6"></div>}
-                    {(rowIndex === 1) && <div className="w-4 sm:w-12"></div>}
+                    {(rowIndex === 1) && <div className="w-4 sm:w-5"></div>}
 
                     {row.map(key => (
                         <Key
                             key={key}
                             value={key}
                             status={keyStates[key.toLowerCase()] || 'default'}
-                            isWide={key === 'Enter' || key === 'Backspace'}
+                            isWide={key === 'Enter'}
                             onClick={onKeyPress}
                         />
                     ))}
+
+
                 </div>
             ))}
         </div>
