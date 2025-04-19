@@ -168,7 +168,7 @@ export default function Home() {
     }}
     >
       {/* Header Bar */}
-      <div className=" flex flex-row w-full justify-center items-center">
+      <div className=" flex flex-col w-full justify-center items-center">
         <h1
         className=" text-white italic lg:text-5xl font-bold text-3xl"
         > 
