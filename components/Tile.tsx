@@ -11,11 +11,9 @@ export default function Tile ({ letter = '', state = 'empty', isFlipping = false
     // Base classes for all tiles
     const baseClasses = "w-12 h-12 border-2 xl:w-26 xl:h-26 lg:w-20 lg:h-20 flex items-center justify-center text-3xl sm:text-4xl font-bold uppercase transition-all duration-300 ease-in-out rounded-2xl ";
     // Animation classes
-    const flipClass = isFlipping ? 'animate-flip' : '';
-    const shakeClass = isShaking ? 'animate-shake' : ''; // Assuming keyframes defined globally
 
     return (
-        <div className={`${baseClasses} ${stateClasses[state]} ${flipClass} ${shakeClass}`}>
+        <div className={`${baseClasses} ${stateClasses[state]}`}>
             {letter}
         </div>
     );

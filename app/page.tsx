@@ -54,6 +54,7 @@ export default function Home() {
   const [ numOffset, setNumOffset ] = useState(0)
   const [ openToolTip, setOpenToolTip ] = useState(false)
   const { data : word, isLoading, isSuccess } = useGetWordleWord()
+  const [ onGameWin, setGameWin ] = useState(false)
   useEffect(() => {
     setWordleWord(word?.word)
   }, [isSuccess])
@@ -90,7 +91,8 @@ export default function Home() {
   const handleEnter = useCallback(async () => {
     if (isProcessing || isGameOver) return;
 
-    if (currentGuess.length !== WORD_LENGTH) {
+    if (currentGuess.length != WORD_LENGTH) {
+        toast("Make sure it is a 5 letter word!")
         setShakeRowIndex(currentRowIndex);
         return;
     }
@@ -136,11 +138,11 @@ export default function Home() {
 
     setKeyStates(newKeyStates);
 
-    console.log(guesses)
     // Check win/loss condition
     if (currentGuess === wordleWord) {
         toast("You Win!")
         let feedback = new Array(5).fill('correct')
+        setGameWin(true)
         const newFeedbackList = [...feedbackList, feedback];
         setFeedbackList(newFeedbackList);
         setOpenToolTip(true)
@@ -194,6 +196,7 @@ export default function Home() {
     setNewGamePress(true)
     const NewWord = await GetNewWordleGame()
     setWordleWord(NewWord.word)
+    setGameWin(false)
     setNumOffset(NewWord.offset)
     setNewGamePress(false)
     setIsGameOver(false)
@@ -242,6 +245,7 @@ export default function Home() {
       
       <div className="max-w-xl w-full">
         <GameBoard 
+          gameWin={onGameWin}
           guesses={guesses}
           feedbackList={feedbackList}
           currentRowIndex={currentRowIndex}
@@ -258,12 +262,13 @@ export default function Home() {
 
 
 // Represents the entire game grid
-const GameBoard = ({ guesses, feedbackList, currentRowIndex, currentGuess, shakeRowIndex }) => {
+const GameBoard = ({gameWin, guesses, feedbackList, currentRowIndex, currentGuess, shakeRowIndex }) => {
   return (
       <div className="grid grid-rows-6 gap-1 mb-6 ">
           {Array.from({ length: MAX_TRIES }).map((_, i) => (
               <WordleRow
                   key={i}
+                  gameWin={gameWin}
                   rowIndex={i}
                   guess={guesses[i] || ''}
                   feedback={feedbackList[i] || []}
