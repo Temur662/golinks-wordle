@@ -7,6 +7,15 @@ import { useGetWordleWord } from "./server/hooks/useGetWordleWord";
 import CheckWordleWord from "./server/CheckWordleGuess";
 import CheckIfValidWord from "./server/CheckIfValidWord";
 import { toast } from "sonner"
+import {RefreshCw} from 'lucide-react'
+import GetNewWordleGame from "./server/GetNewGame";
+import { motion } from "motion/react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 //Constants 
 const WORD_LENGTH = 5;
@@ -40,7 +49,14 @@ export default function Home() {
   const [isGameOver, setIsGameOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // To disable input during animation/submit
   const [shakeRowIndex, setShakeRowIndex] = useState(null); // Index of row to shake
-  const { data : word, isLoading } = useGetWordleWord()
+  const [ newGamePress, setNewGamePress ] = useState(false);
+  const [ wordleWord, setWordleWord ] = useState()
+  const [ numOffset, setNumOffset ] = useState(0)
+  const [ openToolTip, setOpenToolTip ] = useState(false)
+  const { data : word, isLoading, isSuccess } = useGetWordleWord()
+  useEffect(() => {
+    setWordleWord(word?.word)
+  }, [isSuccess])
   // Effect for handling physical keyboard input
   useEffect(() => {
   const handleKeyDown = (event) => {
@@ -60,6 +76,7 @@ export default function Home() {
   window.addEventListener('keydown', handleKeyDown);
   return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isProcessing, isGameOver, currentGuess, guesses]);
+
   const handleLetter = useCallback((letter) => {
     if (currentGuess.length < WORD_LENGTH) {
         setCurrentGuess(prev => prev + letter);
@@ -74,7 +91,6 @@ export default function Home() {
     if (isProcessing || isGameOver) return;
 
     if (currentGuess.length !== WORD_LENGTH) {
-        setMessage("Not enough letters!");
         setShakeRowIndex(currentRowIndex);
         return;
     }
@@ -90,7 +106,7 @@ export default function Home() {
     }
     let feedback = Array(WORD_LENGTH).fill('absent');
 
-    const GuessResponse : { result: string, isOk: boolean, error: string } | undefined = await CheckWordleWord(currentGuess)
+    const GuessResponse : { result: string, isOk: boolean, error: string } | undefined = await CheckWordleWord(currentGuess, numOffset)
     if( !GuessResponse?.error && GuessResponse?.result ){
       setIsProcessing(true); // Disable input
   
@@ -120,12 +136,19 @@ export default function Home() {
 
     setKeyStates(newKeyStates);
 
+    console.log(guesses)
     // Check win/loss condition
-    if (currentGuess === word) {
+    if (currentGuess === wordleWord) {
         toast("You Win!")
+        let feedback = new Array(5).fill('correct')
+        const newFeedbackList = [...feedbackList, feedback];
+        setFeedbackList(newFeedbackList);
+        setOpenToolTip(true)
         setIsGameOver(true);
-    } else if (guesses.length === MAX_TRIES) {
-        toast(`Game Over! Word was: ${word.toUpperCase()}`)
+    } else if (guesses.length == MAX_TRIES - 1) {
+        console.log('Game Over')
+        toast(`Game Over! Word was: ${wordleWord.toUpperCase()}`)
+        setOpenToolTip(true)
         setIsGameOver(true);
     } else {
         // Move to next row
@@ -135,15 +158,16 @@ export default function Home() {
     }
 
     // If game ended, keep processing true to prevent further input until reset
-    if (currentGuess === word || guesses.length === MAX_TRIES) {
+    if (currentGuess === word || guesses.length === MAX_TRIES - 1) {
         // Keep isProcessing true or handle differently if needed
         setIsProcessing(true)
+        setOpenToolTip(true)
         setIsGameOver(true)
     } else {
         setIsProcessing(false); // Re-enable input for next guess
     }
 
-  }, [currentGuess, word, guesses, feedbackList, keyStates, isProcessing, isGameOver, currentRowIndex]);
+  }, [currentGuess, wordleWord, guesses, feedbackList, keyStates, isProcessing, isGameOver, currentRowIndex]);
 
   // Handler for virtual keyboard clicks
   const handleVirtualKeyPress = useCallback((key) => {
@@ -159,21 +183,61 @@ export default function Home() {
     }
   }, [handleEnter, handleBackspace, handleLetter, isProcessing, isGameOver]);
 
-
+  const OnNewGame = async () => {
+    toast('Getting New Word!')
+    setFeedbackList([])
+    setCurrentRowIndex(0)
+    setKeyStates({})
+    setGuesses([])
+    setCurrentGuess('')
+    setIsProcessing(true)
+    setNewGamePress(true)
+    const NewWord = await GetNewWordleGame()
+    setWordleWord(NewWord.word)
+    setNumOffset(NewWord.offset)
+    setNewGamePress(false)
+    setIsGameOver(false)
+    setIsProcessing(false)
+  }
 
   return (
-    <main className=" w-full h-screen flex flex-col space-y-10 items-center justify-center"
+    <main className=" w-full h-screen flex flex-col space-y-10 items-center justify-center px-20"
     style={{
       background : 'linear-gradient(to bottom, #4A3C3C, #8D6E63, #BCAAA4)'
     }}
     >
       {/* Header Bar */}
-      <div className=" flex flex-col w-full justify-center items-center">
+      <div className=" flex flex-row w-full justify-between items-center">
+        <div/>
         <h1
         className=" text-white italic lg:text-5xl font-bold text-3xl"
         > 
           Wordle
         </h1>
+
+       
+
+            <TooltipProvider>
+              <Tooltip open={openToolTip} onOpenChange={setOpenToolTip}>
+                <TooltipTrigger asChild> 
+                  <motion.div 
+                      initial={{ 'rotate': '0deg' }}
+                      animate={ newGamePress ?  { 'rotate': '360deg' } : {} }
+                      transition={{ duration : 2 }}
+                      className="hover:cursor-pointer">          
+                    <RefreshCw className=" text-white" size={35} onClick={async () => await OnNewGame()}/>
+                  </motion.div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Start a New Game!</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+
+
+
+
       </div>
       
       <div className="max-w-xl w-full">

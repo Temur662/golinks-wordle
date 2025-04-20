@@ -1,6 +1,6 @@
 'use server'
 import React from 'react'
-export default async function CheckWordleWord(guess : string) {
+export default async function CheckWordleWord(guess : string, offset? : number) {
     // Wordle .txt answers list from cfreshman github
     const url = 'https://wordle-game-api1.p.rapidapi.com/guess';
     const options = {
@@ -12,7 +12,7 @@ export default async function CheckWordleWord(guess : string) {
         },
         body : JSON.stringify({
             word : guess,
-            timezone: 'UTC + 0'
+            timezone: `UTC + ${offset ? offset : 0}`
         })
         }
 
