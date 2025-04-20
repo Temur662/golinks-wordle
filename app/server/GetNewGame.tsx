@@ -1,5 +1,6 @@
 'use server'
 import React from 'react'
+import CheckIfValidWord from './CheckIfValidWord';
 function getRandomInt(min: number, max:number) {
     min = Math.ceil(min);
     max = Math.floor(max);
@@ -27,11 +28,11 @@ export default async function GetNewWordleGame() {
 
     const response = await fetch(url, options)
     .then(response => response.json())
-    .then(data => {
+    .then(data => {     
         data['offset'] = RandomNumber
         console.log(data)
         return data
     })
-
+    
     return response
 }
